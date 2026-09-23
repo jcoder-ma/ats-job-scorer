@@ -1,3 +1,9 @@
+"""Regression coverage for the deterministic scoring and document-parsing rules.
+
+Fictional fixtures exercise evidence credit, category weights, eligibility,
+manual review, and input boundaries without a browser or external services.
+These tests validate the rubric's behavior, not real-world hiring accuracy.
+"""
 import sys
 import unittest
 import base64
