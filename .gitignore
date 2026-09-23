@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+.env.*
+private/
+uploads/
+*.pdf
+*.docx
+*assessment*.json
+_site/
+browser_test.cjs
