@@ -1,3 +1,7 @@
+# Validate the Python engine and browser script on pull requests and main.
+# Stage an explicit public-file allowlist, then deploy only main to Pages.
+# Pull requests run checks without publishing; deployment permissions are
+# limited to the deploy job and require Pages to use GitHub Actions.
 name: Test and deploy
 on:
   push:

@@ -1,8 +1,16 @@
+/**
+ * Worker bridge between the browser UI and engine.py running in Pyodide.
+ * Load the pinned Python runtime once and unpack the bundled PDF parser on
+ * demand. Requests contain an ID and JSON payload; replies carry the same ID
+ * with a result or error. Candidate input is passed as data, never Python code.
+ * Runtime assets are fetched over the network; candidate documents are not.
+ */
 /* All candidate text remains in the browser's worker memory. */
 import { loadPyodide } from './vendor/pyodide.mjs';
 let runtime, pdfReady;
 const ready=(async()=>{
  runtime=await loadPyodide({indexURL:'https://cdn.jsdelivr.net/pyodide/v314.0.7/full/'});
+//cdn.jsdelivr.net/pyodide/v314.0.7/full/'});
  const response=await fetch('engine.py');
  if(!response.ok)throw new Error('Could not load the scoring engine.');
  runtime.runPython(await response.text());

@@ -1,4 +1,14 @@
-"""Explainable personal job-fit scoring. No external AI or network calls."""
+"""Deterministic, reviewable job-fit scoring shared by the browser and tests.
+
+Extract draft requirements, match labeled resume/experience excerpts, and
+aggregate evidence credit across weighted categories with separate
+eligibility conditions. Automatic matches are provisional and capped at 75%;
+reviewed credit requires a rationale. Scores are heuristics, not ATS outcomes.
+
+Document extraction and the JSON entry point live here so the JavaScript UI
+can delegate parsing and scoring to one Python implementation. This module
+makes no network calls and does not persist candidate data.
+"""
 import base64
 import hashlib
 import html
@@ -154,6 +164,7 @@ def extract_requirements(job):
 
 
 def evidence_units(resume, experiences=''):
+    """Split source text into labeled excerpts while keeping source attribution."""
     result=[]
     for source, text in [('Resume',resume), ('Additional experience',experiences)]:
         for i, paragraph in enumerate(lines(text)):
@@ -163,6 +174,11 @@ def evidence_units(resume, experiences=''):
 
 
 def match_requirement(row, units):
+    """Suggest conservative credit from aliases, action cues, and negation.
+
+    Return supporting excerpts for human review; missing matches do not prove
+    that the candidate lacks the requested experience.
+    """
     key=row.get('concept','')
     if not key:
         return {'level':0, 'status':'Not evidenced', 'evidence':[], 'reason':'No automatic concept mapping. Review this requirement and select supporting evidence.'}
@@ -181,6 +197,12 @@ def match_requirement(row, units):
 
 
 def score(job, resume, experiences='', requirements=None, metadata=None):
+    """Validate the rubric, apply evidence review, and return an assessment.
+
+    Normalize present core categories, reserve 15 points for preferred items
+    when present, and evaluate eligibility separately from evidence points.
+    A confirmed unmet gate overrides the recommendation, not the score.
+    """
     job, resume, experiences=clean(job),clean(resume),clean(experiences)
     if len(job)<40 or len(resume)<40:
         raise ValueError('Add a job description and a resume of at least 40 characters each.')
@@ -255,6 +277,11 @@ def score(job, resume, experiences='', requirements=None, metadata=None):
 
 
 def extract_document(name, content):
+    """Decode a bounded base64 upload and extract plain text by file extension.
+
+    DOCX uses ZIP/XML and PDF uses pypdf; scanned PDFs need external OCR.
+    Reject oversized or unsupported inputs rather than storing source files.
+    """
     data=base64.b64decode(content,validate=True)
     if len(data)>MAX_FILE:raise ValueError('File exceeds the 8 MB limit.')
     suffix=name.lower().rsplit('.',1)[-1]
@@ -279,6 +306,10 @@ def extract_document(name, content):
 
 
 def api(payload):
+    """Dispatch a JSON request to extraction or scoring and return JSON text.
+
+    Exceptions propagate to the worker, which converts them to UI errors.
+    """
     data=json.loads(payload)
     action=data.pop('action','score')
     if action=='extract':return json.dumps({'text':extract_document(data['name'],data['content'])})

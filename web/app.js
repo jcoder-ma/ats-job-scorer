@@ -1,9 +1,17 @@
+/**
+ * Browser UI for the job-fit workbench: collect inputs, review requirements,
+ * display assessments, and export or restore user-managed files.
+ * Scoring and document parsing are delegated to the Python worker through
+ * request IDs. Candidate text stays in memory unless the user downloads it;
+ * rendered evidence uses text nodes rather than HTML interpolation.
+ */
 'use strict';
 const $=id=>document.getElementById(id);
 const categories=['Leadership','Architecture and technical skills','Delivery and collaboration','Reliability and security','AI and developer productivity','Business and domain'];
 let worker, ready=false, counter=0, requirements=[], report=null, lastInputs=null, pending=new Map();
 function error(message){$('error').textContent=message;$('error').hidden=!message;}
 function status(message){$('status').textContent=message;}
+/** Initialize the Python worker and route replies to pending UI requests. */
 function startWorker(){
  worker=new Worker('worker.js',{type:'module'});
  worker.onmessage=({data})=>{
@@ -26,6 +34,7 @@ function labeled(title,element){const label=node('label',title);label.append(ele
 function select(options,value,onchange){const e=node('select');for(const [v,t] of options){const o=node('option',t);o.value=v;e.append(o);}e.value=value;e.onchange=()=>onchange(e.value);return e;}
 function download(name,data,type){const u=URL.createObjectURL(new Blob([data],{type}));const a=node('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}
 function invalidate(){report=null;$('results').hidden=true;}
+/** Build editable requirement cards with source excerpts and review controls. */
 function renderReview(result){
  const container=$('review');container.replaceChildren();
  const lookup=new Map([...(result?.requirements||[]),...(result?.eligibility||[])].map(r=>[r.id,r]));
@@ -58,6 +67,7 @@ function renderReview(result){
  }
  $('review-section').hidden=false;
 }
+/** Draft the rubric and suggested evidence before the user calculates results. */
 async function build(){
  error('');$('analyze').disabled=true;status('Extracting requirements and finding supporting evidence…');
  try{
@@ -91,6 +101,7 @@ function showResult(result,baseline){
  $('method').textContent=result.methodology+' Displayed total: '+result.score+'/100 before whole-number rounding. Category weights are normalized across detected categories; preferred qualifications never exceed 15 points.';
  $('results').hidden=false;
 }
+// Score the reviewed profile and a separate automatic resume-only baseline.
 $('calculate').onclick=async()=>{
  error('');$('calculate').disabled=true;
  try{
@@ -123,6 +134,7 @@ $('export').onclick=()=>{
  text+='\n## Eligibility\n';for(const g of report.eligibility)text+=`\n- ${g.status}: ${g.text} ${g.reason}\n`;
  download('job-fit-report.md',text,'text/markdown');
 };
+// Persistence is explicit: save a local JSON file and validate it on restore.
 $('save').onclick=()=>download('job-fit-assessment.json',JSON.stringify({schema_version:1,inputs:values(),requirements},null,2),'application/json');
 $('load').onchange=async event=>{
  const file=event.target.files[0];if(!file)return;error('');
@@ -137,6 +149,7 @@ $('load').onchange=async event=>{
   requirements=data.requirements;lastInputs=values();invalidate();renderReview(result);status('Assessment restored in memory. Calculate to refresh the report.');
  }catch(e){error(e.message);}
 };
+// Reset the UI and terminate the worker to discard its in-memory candidate data.
 $('clear').onclick=()=>{
  for(const id of ['job','resume','experience','role','company','url','baseline','resume-file','experience-file','load'])$(id).value='';
  requirements=[];lastInputs=null;invalidate();$('review-section').hidden=true;$('review').replaceChildren();$('gates').replaceChildren();$('strengths').replaceChildren();$('gaps').replaceChildren();error('');
