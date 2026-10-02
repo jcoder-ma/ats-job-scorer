@@ -234,14 +234,17 @@ def score(job, resume, experiences='', requirements=None, metadata=None):
         reviewed=bool(row.get('reviewed',False))
         level=match['level']
         if reviewed:
-            level=row.get('level')
+            level=row.get('level',match['level'])
             if isinstance(level,bool) or level not in (0,.25,.5,.75,1):
                 raise ValueError('Reviewed scores must be 0, 0.25, 0.5, 0.75 or 1.')
-            if not str(row.get('reason','')).strip():
-                raise ValueError('Add a rationale for each reviewed score.')
+            override=(level!=match['level'])
+            if override and not str(row.get('reason','')).strip():
+                raise ValueError('Add a rationale when overriding the suggested score.')
             match['status']={0:'Not evidenced',.25:'Keyword only',.5:'Partial',.75:'Substantial evidence',1:'Demonstrated'}[level]
+            reason=str(row.get('reason','') or '').strip()
+            match['reason']=reason or match['reason']
         scored.append({**row,**match,'level':level,'category':category,'reviewed':reviewed,
-                       'reason':row.get('reason') if reviewed else match['reason']})
+                       'reason':match['reason']})
     if not scored:
         raise ValueError('Add at least one core or preferred requirement; eligibility alone is not a fit score.')
     cats=sorted({r['category'] for r in scored if r['category']!='Preferred qualifications'})

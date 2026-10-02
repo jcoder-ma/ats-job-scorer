@@ -45,8 +45,12 @@ class EngineTests(unittest.TestCase):
   for x in rows:
    if x['importance']=='eligibility':x['gate_status']='unmet'
   self.assertEqual(score(JOB,RESUME,requirements=rows)['recommendation'],'Do not apply under the stated conditions')
- def test_review_requires_reason(self):
-  rows=extract_requirements(JOB);rows[0].update(reviewed=True,level=1)
+ def test_review_requires_reason_only_on_override(self):
+  auto=score(JOB,RESUME)
+  rows=extract_requirements(JOB)
+  rows[0].update(reviewed=True,level=auto['requirements'][0]['level'])
+  self.assertEqual(score(JOB,RESUME,requirements=rows)['reviewed_count'],1)
+  rows[0].update(reviewed=True,level=1)
   with self.assertRaises(ValueError):score(JOB,RESUME,requirements=rows)
  def test_manual_review(self):
   rows=extract_requirements(JOB);rows[0].update(reviewed=True,level=1,reason='Verified production project with exact scope.')
