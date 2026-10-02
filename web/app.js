@@ -57,7 +57,7 @@ function renderReview(result){
   if(matched?.evidence?.length){
    for(const ev of matched.evidence){const q=node('div',undefined,'quote');q.append(node('b',ev.source),node('span',ev.text));card.append(q);}
   }else if(req.importance!=='eligibility'){card.append(node('p',matched?.reason||'No automatic supporting excerpt. Add a rationale if you have evidence.','hint'));}
-  const reason=node('textarea');reason.rows=2;reason.placeholder='Explain the match, gap, or eligibility answer. Cite the relevant example and scope.';reason.value=req.reason||'';reason.oninput=()=>{req.reason=reason.value;invalidate();};card.append(labeled('Your rationale',reason));
+  const reason=node('textarea');reason.rows=2;reason.placeholder='Only needed when you override the suggested score. Cite the relevant example and scope.';reason.value=req.reason||'';reason.oninput=()=>{req.reason=reason.value;invalidate();};card.append(labeled('Your rationale',reason));
   if(req.importance!=='eligibility'){
    const check=node('input');check.type='checkbox';check.checked=!!req.reviewed;
    check.onchange=()=>{req.reviewed=check.checked;req.level=Number(card.querySelector('[data-level]').value);invalidate();};
